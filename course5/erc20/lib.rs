@@ -41,7 +41,7 @@ mod erc20 {
             let instance = Self {
                 total_supply: total_supply,
                 balances: balances,
-                allowances: StorageHashMap::new(),
+                allowance: StorageHashMap::new(),
             };
             
             instance
@@ -49,7 +49,7 @@ mod erc20 {
 
         #[ink(message)]
         pub fn total_supply(&self) -> Balance {
-            *self.total_supply
+            self.total_supply
         }
 
         #[ink(message)]
@@ -64,7 +64,7 @@ mod erc20 {
         #[ink(message)]
         pub fn transfer(&mut self, to: AccountId, value: Balance) -> Result<()> {
             let who = Self::env().caller();
-            self.transfer_helper(who, to, value);
+            self.transfer_helper(who, to, value)
         }
 
         // #[ink(message)]
@@ -99,11 +99,6 @@ mod erc20 {
             Ok(())
         }
 
-        /// Simply returns the current value of our `bool`.
-        #[ink(message)]
-        pub fn get(&self) -> bool {
-            self.value
-        }
     }
 
     /// Unit tests in Rust are normally defined within such a `#[cfg(test)]`
