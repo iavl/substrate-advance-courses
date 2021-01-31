@@ -1,7 +1,7 @@
 {
   "metadataVersion": "0.1.0",
   "source": {
-    "hash": "0xfbc91ec3d3cb21592e4555673d061a6f6890dc09c5745bc5a35e92ca7c122043",
+    "hash": "0x6bfc97fe732f4e15839e0391ca4543945fac6e5c585e36b704a4b1052d3ccf7c",
     "language": "ink! 3.0.0-rc2",
     "compiler": "rustc 1.49.0-nightly"
   },
@@ -17,7 +17,7 @@
       {
         "args": [
           {
-            "name": "total_supply",
+            "name": "init_supply",
             "type": {
               "displayName": [
                 "Balance"
@@ -27,7 +27,7 @@
           }
         ],
         "docs": [
-          " Constructor that initializes the `bool` value to the given `init_value`."
+          " Creates a new ERC20 contract."
         ],
         "name": [
           "new"
@@ -45,6 +45,45 @@
             "name": "from",
             "type": {
               "displayName": [
+                "Option"
+              ],
+              "type": 15
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "name": "to",
+            "type": {
+              "displayName": [
+                "Option"
+              ],
+              "type": 15
+            }
+          },
+          {
+            "docs": [],
+            "indexed": false,
+            "name": "value",
+            "type": {
+              "displayName": [
+                "Balance"
+              ],
+              "type": 1
+            }
+          }
+        ],
+        "docs": [],
+        "name": "Transfer"
+      },
+      {
+        "args": [
+          {
+            "docs": [],
+            "indexed": true,
+            "name": "owner",
+            "type": {
+              "displayName": [
                 "AccountId"
               ],
               "type": 5
@@ -53,7 +92,7 @@
           {
             "docs": [],
             "indexed": true,
-            "name": "to",
+            "name": "spender",
             "type": {
               "displayName": [
                 "AccountId"
@@ -74,7 +113,35 @@
           }
         ],
         "docs": [],
-        "name": "Transfer"
+        "name": "Approval"
+      },
+      {
+        "args": [
+          {
+            "docs": [],
+            "indexed": true,
+            "name": "owner",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 5
+            }
+          },
+          {
+            "docs": [],
+            "indexed": false,
+            "name": "value",
+            "type": {
+              "displayName": [
+                "Balance"
+              ],
+              "type": 1
+            }
+          }
+        ],
+        "docs": [],
+        "name": "Burn"
       }
     ],
     "messages": [
@@ -123,6 +190,41 @@
       {
         "args": [
           {
+            "name": "owner",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 5
+            }
+          },
+          {
+            "name": "spender",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 5
+            }
+          }
+        ],
+        "docs": [],
+        "mutates": false,
+        "name": [
+          "allowance"
+        ],
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "Balance"
+          ],
+          "type": 1
+        },
+        "selector": "0xf3cfff66"
+      },
+      {
+        "args": [
+          {
             "name": "to",
             "type": {
               "displayName": [
@@ -154,6 +256,111 @@
           "type": 12
         },
         "selector": "0xfae3a09d"
+      },
+      {
+        "args": [
+          {
+            "name": "from",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 5
+            }
+          },
+          {
+            "name": "to",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 5
+            }
+          },
+          {
+            "name": "value",
+            "type": {
+              "displayName": [
+                "Balance"
+              ],
+              "type": 1
+            }
+          }
+        ],
+        "docs": [],
+        "mutates": true,
+        "name": [
+          "transfer_from"
+        ],
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "Result"
+          ],
+          "type": 12
+        },
+        "selector": "0xfcfb2ccd"
+      },
+      {
+        "args": [
+          {
+            "name": "spender",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 5
+            }
+          },
+          {
+            "name": "value",
+            "type": {
+              "displayName": [
+                "Balance"
+              ],
+              "type": 1
+            }
+          }
+        ],
+        "docs": [],
+        "mutates": true,
+        "name": [
+          "approve"
+        ],
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "Result"
+          ],
+          "type": 12
+        },
+        "selector": "0x03d0e114"
+      },
+      {
+        "args": [
+          {
+            "name": "value",
+            "type": {
+              "displayName": [
+                "Balance"
+              ],
+              "type": 1
+            }
+          }
+        ],
+        "docs": [],
+        "mutates": true,
+        "name": [
+          "burn"
+        ],
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "Result"
+          ],
+          "type": 12
+        },
+        "selector": "0x120bc564"
       }
     ]
   },
@@ -327,7 +534,7 @@
               ]
             }
           },
-          "name": "allowance"
+          "name": "allowances"
         }
       ]
     }
@@ -562,6 +769,10 @@
             {
               "discriminant": 0,
               "name": "InsufficientBalance"
+            },
+            {
+              "discriminant": 1,
+              "name": "InsufficientBurn"
             }
           ]
         }
@@ -570,6 +781,31 @@
         "erc20",
         "erc20",
         "Error"
+      ]
+    },
+    {
+      "def": {
+        "variant": {
+          "variants": [
+            {
+              "name": "None"
+            },
+            {
+              "fields": [
+                {
+                  "type": 5
+                }
+              ],
+              "name": "Some"
+            }
+          ]
+        }
+      },
+      "params": [
+        5
+      ],
+      "path": [
+        "Option"
       ]
     }
   ]
