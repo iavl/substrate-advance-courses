@@ -219,7 +219,7 @@ mod erc20 {
                 ink_env::test::default_accounts::<ink_env::DefaultEnvironment>()
                     .expect("Cannot get accounts");
 
-            assert_eq!(erc20.brun(accounts.alice, 10), Ok(()));
+            assert_eq!(erc20.burn(10), Ok(()));
             assert_eq!(erc20.balance_of(accounts.alice), 90);
         }
     }
