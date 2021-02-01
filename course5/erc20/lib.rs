@@ -9,6 +9,7 @@ mod erc20 {
 
     #[ink(storage)]
     pub struct Erc20 {
+        owner: AccountId,
         /// Total token supply
         total_supply: Balance,
         /// Mapping owner -> balance
@@ -47,6 +48,7 @@ mod erc20 {
     pub enum Error {
         InsufficientBalance,
         InsufficientBurn,
+        IssueNotOwner,
     }
 
     // Result type
@@ -61,6 +63,7 @@ mod erc20 {
             balances.insert(caller, init_supply);
 
             let instance = Self {
+                owner: caller,
                 total_supply: init_supply,
                 balances,
                 allowances: StorageHashMap::new(),
@@ -137,9 +140,21 @@ mod erc20 {
             Ok(())
         }
 
-        // #[ink(message)]
-        // pub fn issue(&mut self, to: AccountId, value: Balance) -> Result<()> {
-        // }
+        #[ink(message)]
+        pub fn issue(&mut self, to: AccountId, value: Balance) -> Result<()> {
+            let caller = self.env().caller();
+
+            if caller != self.owner{
+				return Err(Error::IssueNotOwner);
+            }
+
+            let to_balance = self.balance_of(to);
+
+            self.balances.insert(to, to_balance + value);
+            self.total_supply = self.total_supply + value;
+            
+            Ok(())
+        }
 
         fn transfer_helper(&mut self, from: AccountId, to: AccountId, value: Balance) -> Result<()> {
             let from_balance = self.balance_of(from);
@@ -169,6 +184,79 @@ mod erc20 {
         /// Imports all the definitions from the outer scope so we can use them here.
         use super::*;
         use ink_lang as ink;
+
+        use ink_env::{
+            hash::{
+                Blake2x256,
+                CryptoHash,
+                HashOutput,
+            },
+            Clear,
+        };
+
+        type Event = <Erc20 as ::ink_lang::BaseEvent>::Type;
+
+        fn assert_transfer_event(
+            event: &ink_env::test::EmittedEvent,
+            expected_from: Option<AccountId>,
+            expected_to: Option<AccountId>,
+            expected_value: Balance,
+        ) {
+            let decoded_event = <Event as scale::Decode>::decode(&mut &event.data[..])
+                .expect("encountered invalid contract event data buffer");
+            if let Event::Transfer(Transfer { from, to, value }) = decoded_event {
+                assert_eq!(from, expected_from, "encountered invalid Transfer.from");
+                assert_eq!(to, expected_to, "encountered invalid Transfer.to");
+                assert_eq!(value, expected_value, "encountered invalid Trasfer.value");
+            } else {
+                panic!("encountered unexpected event kind: expected a Transfer event")
+            }
+            fn encoded_into_hash<T>(entity: &T) -> Hash
+            where
+                T: scale::Encode,
+            {
+                let mut result = Hash::clear();
+                let len_result = result.as_ref().len();
+                let encoded = entity.encode();
+                let len_encoded = encoded.len();
+                if len_encoded <= len_result {
+                    result.as_mut()[..len_encoded].copy_from_slice(&encoded);
+                    return result
+                }
+                let mut hash_output =
+                    <<Blake2x256 as HashOutput>::Type as Default>::default();
+                <Blake2x256 as CryptoHash>::hash(&encoded, &mut hash_output);
+                let copy_len = core::cmp::min(hash_output.len(), len_result);
+                result.as_mut()[0..copy_len].copy_from_slice(&hash_output[0..copy_len]);
+                result
+            }
+            let expected_topics = vec![
+                encoded_into_hash(&PrefixedValue {
+                    value: b"Erc20::Transfer",
+                    prefix: b"",
+                }),
+                encoded_into_hash(&PrefixedValue {
+                    prefix: b"Erc20::Transfer::from",
+                    value: &expected_from,
+                }),
+                encoded_into_hash(&PrefixedValue {
+                    prefix: b"Erc20::Transfer::to",
+                    value: &expected_to,
+                }),
+                encoded_into_hash(&PrefixedValue {
+                    prefix: b"Erc20::Transfer::value",
+                    value: &expected_value,
+                }),
+            ];
+            for (n, (actual_topic, expected_topic)) in
+                event.topics.iter().zip(expected_topics).enumerate()
+            {
+                let topic = actual_topic
+                    .decode::<Hash>()
+                    .expect("encountered invalid topic encoding");
+                assert_eq!(topic, expected_topic, "encountered invalid topic at {}", n);
+            }
+        }
 
         /// We test if the default constructor does its job.
         #[ink::test]
@@ -208,6 +296,20 @@ mod erc20 {
 
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
             assert_eq!(emitted_events.len(), 2);
+
+            assert_transfer_event(
+                &emitted_events[0], 
+                None, 
+                Some(AccountId::from([0x01; 32])), 
+                1000, 
+            );
+
+            // assert_transfer_event(
+            //     &emitted_events[1],  
+            //     Some(AccountId::from([0x01; 32])),
+            //     Some(AccountId::from([0x02; 32])),
+            //     10,
+            // );
         }
 
         #[ink::test]
@@ -223,4 +325,26 @@ mod erc20 {
             assert_eq!(erc20.balance_of(accounts.alice), 90);
         }
     }
+
+        /// For calculating the event topic hash.
+        struct PrefixedValue<'a, 'b, T> {
+            pub prefix: &'a [u8],
+            pub value: &'b T,
+        }
+    
+        impl<X> scale::Encode for PrefixedValue<'_, '_, X>
+        where
+            X: scale::Encode,
+        {
+            #[inline]
+            fn size_hint(&self) -> usize {
+                self.prefix.size_hint() + self.value.size_hint()
+            }
+    
+            #[inline]
+            fn encode_to<T: scale::Output + ?Sized>(&self, dest: &mut T) {
+                self.prefix.encode_to(dest);
+                self.value.encode_to(dest);
+            }
+        }
 }
